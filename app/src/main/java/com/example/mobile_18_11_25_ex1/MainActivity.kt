@@ -27,14 +27,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 1. Ánh xạ View
+        // Ánh xạ View
         edtHoTen = findViewById(R.id.edtHoTen)
         edtMSSV = findViewById(R.id.edtMSSV)
         btnAdd = findViewById(R.id.btnAdd)
         btnUpdate = findViewById(R.id.btnUpdate)
         recyclerView = findViewById(R.id.recyclerView)
 
-        // 2. Cấu hình RecyclerView và Adapter
+        // Cấu hình RecyclerView và Adapter
         adapter = StudentAdapter(studentList,
             onUserClick = { student ->
                 // Khi click vào 1 sinh viên: Đẩy thông tin lên EditText
@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // 3. Xử lý nút ADD
+        // Xử lý nút ADD
         btnAdd.setOnClickListener {
             val hoten = edtHoTen.text.toString()
             val mssv = edtMSSV.text.toString()
@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 4. Xử lý nút UPDATE
+        // Xử lý nút UPDATE
         btnUpdate.setOnClickListener {
             if (currentEditingIndex != -1) { // Kiểm tra xem có đang chọn ai không
                 val hotenMoi = edtHoTen.text.toString()
