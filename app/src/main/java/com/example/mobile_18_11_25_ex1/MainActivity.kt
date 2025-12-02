@@ -1,97 +1,91 @@
 package com.example.mobile_18_11_25_ex1
 
+import android.app.Activity
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
+import android.view.Menu
+import android.view.MenuItem
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var edtHoTen: EditText
-    private lateinit var edtMSSV: EditText
-    private lateinit var btnAdd: Button
-    private lateinit var btnUpdate: Button
     private lateinit var recyclerView: RecyclerView
-
-    // Danh sách sinh viên
-    private val studentList = mutableListOf<Student>()
     private lateinit var adapter: StudentAdapter
+    private val studentList = mutableListOf<Student>()
+    private var editingPosition: Int = -1
 
-    // Biến lưu vị trí sinh viên đang được chọn để sửa (-1 là chưa chọn ai)
-    private var currentEditingIndex: Int = -1
+    private val addStudentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val newStudent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra("new_student", Student::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra("new_student")
+            }
+            newStudent?.let {
+                studentList.add(it)
+                adapter.notifyItemInserted(studentList.size - 1)
+            }
+        }
+    }
+
+    private val updateStudentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val updatedStudent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra("updated_student", Student::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra("updated_student")
+            }
+            if (updatedStudent != null && editingPosition != -1) {
+                studentList[editingPosition] = updatedStudent
+                adapter.notifyItemChanged(editingPosition)
+                editingPosition = -1
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Ánh xạ View
-        edtHoTen = findViewById(R.id.edtHoTen)
-        edtMSSV = findViewById(R.id.edtMSSV)
-        btnAdd = findViewById(R.id.btnAdd)
-        btnUpdate = findViewById(R.id.btnUpdate)
         recyclerView = findViewById(R.id.recyclerView)
-
-        // Cấu hình RecyclerView và Adapter
         adapter = StudentAdapter(studentList,
             onUserClick = { student ->
-                // Khi click vào 1 sinh viên: Đẩy thông tin lên EditText
-                edtHoTen.setText(student.hoten)
-                edtMSSV.setText(student.mssv)
-                // Lưu lại vị trí đang sửa
-                currentEditingIndex = studentList.indexOf(student)
+                editingPosition = studentList.indexOf(student)
+                val intent = Intent(this, StudentDetailActivity::class.java).apply {
+                    putExtra("student", student)
+                }
+                updateStudentLauncher.launch(intent)
             },
             onDeleteClick = { student ->
-                // Khi click nút xóa
-                studentList.remove(student)
-                adapter.notifyDataSetChanged() // Cập nhật lại giao diện
-                Toast.makeText(this, "Đã xóa", Toast.LENGTH_SHORT).show()
+                val position = studentList.indexOf(student)
+                studentList.removeAt(position)
+                adapter.notifyItemRemoved(position)
             }
         )
 
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
+    }
 
-        // Xử lý nút ADD
-        btnAdd.setOnClickListener {
-            val hoten = edtHoTen.text.toString()
-            val mssv = edtMSSV.text.toString()
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
 
-            if (hoten.isNotEmpty() && mssv.isNotEmpty()) {
-                val newStudent = Student(hoten, mssv)
-                studentList.add(newStudent)
-                adapter.notifyDataSetChanged() // Cập nhật list
-
-                // Xóa trắng ô nhập
-                edtHoTen.text.clear()
-                edtMSSV.text.clear()
-            } else {
-                Toast.makeText(this, "Vui lòng nhập đủ thông tin", Toast.LENGTH_SHORT).show()
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.add_student -> {
+                val intent = Intent(this, AddStudentActivity::class.java)
+                addStudentLauncher.launch(intent)
+                true
             }
-        }
-
-        // Xử lý nút UPDATE
-        btnUpdate.setOnClickListener {
-            if (currentEditingIndex != -1) { // Kiểm tra xem có đang chọn ai không
-                val hotenMoi = edtHoTen.text.toString()
-                val mssvMoi = edtMSSV.text.toString()
-
-                // Cập nhật dữ liệu trong list
-                studentList[currentEditingIndex].hoten = hotenMoi
-                studentList[currentEditingIndex].mssv = mssvMoi
-
-                adapter.notifyDataSetChanged() // Làm mới list
-
-                // Reset trạng thái
-                currentEditingIndex = -1
-                edtHoTen.text.clear()
-                edtMSSV.text.clear()
-                Toast.makeText(this, "Đã cập nhật", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Chưa chọn sinh viên để sửa", Toast.LENGTH_SHORT).show()
-            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }
